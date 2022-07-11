@@ -1,0 +1,26 @@
+server:
+  port: 8082
+  
+spring:
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      routes:
+        - id: COMPANY-SERVICE
+          uri: lb://COMPANY-SERVICE
+          predicates:
+            - Path=/api/v1.0/market/company/**
+        - id: STOCK-SERVICE
+          uri: lb://STOCK-SERVICE
+          predicates:
+            - Path=/api/v1.0/market/stock/**
+  config:
+       import : "optional:configserver: http://cloud-config-server:8088"
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone : ${EUREKA_SERVER:http://eureka-server:8761/eureka}
+    

@@ -1,0 +1,21 @@
+server:
+  port: 8086
+  
+spring:  data:    mongodb:      database: marketplace
+      uri: mongodb://localhost:27017/marketplace
+      
+  application:
+    name: STOCK-SERVICE
+    
+  mvc:
+    pathmatch:
+      matching-strategy: ant-path-matcher
+    
+  rabbitmq:
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
+      
+  config:
+       import : "optional:configserver: http://cloud-config-server:8088"

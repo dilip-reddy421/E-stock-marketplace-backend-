@@ -6,40 +6,39 @@ services:
         ports:
             - 5672:5672
             - 15672:15672
+        networks:
+            - stk-network
     
-	elasticsearch:
+    elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
         ports:
             - "9200:9200"
         networks:
-            - mynetwork
+            - stk-network
         environment:
             - "discovery.type=single-node"
         volumes:
             - ./elasticsearch/data:/usr/share/elasticsearch/data:rw              # Persistence data
 
-	logstash:
+    logstash:
         image: docker.elastic.co/logstash/logstash:7.2.0
         ports:
             - "25826:25826"
             - "5044:5044"
         networks:
-            - mynetwork
+            - stk-network
         volumes:
             - ./logstash/pipeline:/usr/share/logstash/pipeline:ro                # Pipeline configuration
         restart: on-failure
-        links:
-            - kafka
-            - elasticsearch
         depends_on:
             - elasticsearch
         
-	kibana:
+    kibana:
         image: docker.elastic.co/kibana/kibana:7.2.0
         ports:
             - "5601:5601"
         networks:
-            - mynetwork
+            - stk-network
         restart: on-failure
         depends_on:
             - elasticsearch
@@ -53,10 +52,12 @@ services:
           - ./filebeat/data:/usr/share/filebeat/data:rw                        # Persistence data
         user: root                                                             # Allow access to log files and docker.sock
         restart: on-failure
+        networks:
+            - stk-network
         depends_on:
           - logstash
           
-	cloud-config-server:
+    cloud-config-server:
         container_name: cloud-config-server
         build:
             context: ./cloud-config-server
@@ -101,12 +102,12 @@ services:
         networks:
             - stk-network
         links:
-            - cloud-config-server:cloud-config-server
-            - service-registry : service-registry
+            - cloud-config-server
+            - service-registry
         depends_on:
             - cloud-config-server
             - service-registry
-            -db
+            - db
         
     stock-service:
         container_name: stock-service
@@ -133,13 +134,13 @@ services:
         labels:
               collect_logs_with_filebeat: "true"
               decode_log_event_to_json_object: "true"
-    Api-Gateway:
-        container_name: Api-Gateway
+    api-gateway:
+        container_name: api-gateway
         build:
             context: ./Api-Gateway
             dockerfile: Dockerfile
-        image: Api-Gateway:latest
-		environment:
+        image: api-gateway:latest
+        environment:
               SPRING_CONFIG_IMPORT: cloudconfigserver:http://cloud-config-server:8088/
               EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
         expose:
@@ -149,27 +150,31 @@ services:
         networks:
             - stk-network
         links:
-            - cloud-config-server: cloud-config-server
+            - cloud-config-server:cloud-config-server
             - service-registry:service-registry
         depends_on:
             - cloud-config-server
             - service-registry
-	
-	db:
-		image: mysql:8.0.21
-		ports:
-			- "3396:3306"
-		environment:
-			MYSQL_ROOT_PASSWORD: root
-		volumes:
-			- ./db:/docker-entrypoint-initdb.d/:ro
-			
+            
+    db:
+        image: mysql:8.0.21
+        ports:
+            - "3396:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+        volumes:
+            - ./db:/docker-entrypoint-initdb.d/:ro
+        networks:
+            - stk-network
+            
     mongo_db:
-		image: mongo:latest
-		container_name: mongo_db
-		restart: always
-		ports:
-			- 27017:27017
+        image: mongo:latest
+        container_name: mongo_db
+        restart: always
+        ports:
+            - 27017:27017
+        networks:
+            - stk-network
         
 networks:
     stk-network:

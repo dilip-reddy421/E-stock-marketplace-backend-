@@ -37,14 +37,13 @@ public class CompanyController {
 		
 		log.info("registerCompany method called with request {}", company);
 		Company response = companyService.registerCompany(company);
-		System.out.println("company response"+company);
+		log.info("Company registered successfully");
 		return response;
 	}
 	
 	@GetMapping("info/{companycode}")
 	public CompanyStockDTO fetchCompany(@PathVariable String companycode) {
 		log.info("fetchCompany method called with companycode {}", companycode);
-		System.out.println("company req"+companycode);
 		Company company = companyService.fetchCompany(companycode);
 		//making call to stock service to get latest stock price  for company using feign client
 		CompanyStockDTO companyStockDto = null;
@@ -52,29 +51,27 @@ public class CompanyController {
 			Double stockPrice = stockServiceClient.latestStockPrice(company.getCompanyCode());
 			companyStockDto = CompanyUtils.toCompanyStockDto(company, stockPrice);
 		}
-		System.out.println("company response"+companyStockDto);
+		log.info("fetchCompany method response {}", companyStockDto);
 		return companyStockDto;
 	}
 	
 	@GetMapping("getAll")
 	public List<CompanyStockDTO> getAllCompanyDetails() {
-		
+		log.info("getAllCompanyDetails method called");
 		List<Company> companyList = companyService.getAllCompanyDetails();
-		//making call to stock service to get latest stock price  for company using feign client
+		//making call to stock service to get latest stock price  for all companies using feign client
 		Map<String, Double> stockPriceMap = stockServiceClient.lateststocksForAllCompanies();
 		List<CompanyStockDTO> companyStockDtoList = CompanyUtils.tocompanyStockDtoList(companyList, stockPriceMap);
-		System.out.println("companyStockDtoList"+companyStockDtoList);
-		//to do get latest stock price
+		log.info("getAllCompanyDetails method returned with count {}", companyStockDtoList.size());
+
 		return companyStockDtoList;
 	}
 	
 	@DeleteMapping("delete/{companycode}")
 	public String deleteCompany(@PathVariable String companycode) {
-		
-		System.out.println("company req"+companycode);
+		log.info("deleteCompany method called with companycode {}", companycode);
 		String response = companyService.deleteCompany(companycode);
-		System.out.println("company response"+response);
-		//to do get latest stock price
+		log.info("deleteCompany method response {}", response);
 		return response;
 	}
 	

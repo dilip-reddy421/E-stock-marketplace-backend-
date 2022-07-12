@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +22,14 @@ import com.hfse.stock.service.StockService;
 @RequestMapping("/api/v1.0/market/stock")
 public class StockController {
 	
+	final org.slf4j.Logger log = LoggerFactory.getLogger(StockController.class);
+	
 	@Autowired
 	private StockService stockService;
 	
 	@PostMapping("add/{companycode}")
 	public Stock saveStockforCompany(@RequestBody Stock stock) {
-		
+		log.info("saveStockforCompany method called with request {}", stock);
 		return stockService.saveStockforCompany(stock);
 	}
 	
@@ -34,7 +37,7 @@ public class StockController {
 	public StockDTO getStockInfo(@PathVariable String companyCode,
 			@PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate, 
 			@PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-		
+		log.info("getStockInfo method called with companyCode {}", companyCode);
 		return stockService.getstock(companyCode,startDate,endDate);
 	}
 	

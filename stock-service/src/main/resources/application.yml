@@ -18,4 +18,4 @@ spring:  data:    mongodb:      database: marketplace
       password: guest
       
   config:
-       import : "optional:configserver: http://cloud-config-server:8088"
+       import : "optional:configserver: http://localhost:8088"

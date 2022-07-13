@@ -63,6 +63,8 @@ services:
             context: ./cloud-config-server
             dockerfile: Dockerfile
         image: cloud-config-server:latest
+        environment:
+            SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:
             - 8088
         ports:
@@ -90,8 +92,12 @@ services:
             dockerfile: Dockerfile
         image: company-service:latest
         environment:
-              SPRING_CONFIG_IMPORT: cloudconfigserver:http://cloud-config-server:8088/
-              EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+            SPRING_DATASOURCE_URL : jdbc:mysql://mysql-db:3306/marketplace?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+            SPRING_DATASOURCE_USERNAME : root
+            SPRING_DATASOURCE_PASSWORD : root
+            SPRING_RABBITMQ_HOST :rabbitmq
+            SPRING_APPLICATION_JSON: '{"spring":{"config":{"import":"configserver:http://cloud-config-server:8088/"}}}'
+            SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:
             - 8085
         ports:
@@ -107,7 +113,8 @@ services:
         depends_on:
             - cloud-config-server
             - service-registry
-            - db
+            - mysql-db
+            - rabbitmq
         
     stock-service:
         container_name: stock-service
@@ -116,8 +123,16 @@ services:
             dockerfile: Dockerfile
         image: stock-service:latest
         environment:
-              SPRING_CONFIG_IMPORT: cloudconfigserver:http://cloud-config-server:8088/
-              EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+            SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE:marketplace
+            SPRING_DATA_MONGODB_HOST:mongo_db
+            SPRING_DATA_MONGODB_PORT:27817
+            SPRING_DATA_MONGODB_URI:mongodb://mongo_db:27817/marketplace
+            SPRING_DATA_MONGODB_USERNAME:dvuser
+            SPRING_DATA_MONGODB_PASSWORD:dvuser
+            SPRING_DATA_MONGODB_DATABASE:marketplace
+            SPRING_RABBITMQ_HOST :rabbitmq
+            SPRING_APPLICATION_JSON: '{"spring":{"config":{"import":"configserver:http://cloud-config-server:8088/"}}}'
+            SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:
             - 8086
         ports:
@@ -131,6 +146,7 @@ services:
             - cloud-config-server
             - service-registry
             - mongo_db
+            - rabbitmq
         labels:
               collect_logs_with_filebeat: "true"
               decode_log_event_to_json_object: "true"
@@ -141,8 +157,8 @@ services:
             dockerfile: Dockerfile
         image: api-gateway:latest
         environment:
-              SPRING_CONFIG_IMPORT: cloudconfigserver:http://cloud-config-server:8088/
-              EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+            SPRING_APPLICATION_JSON: '{"spring":{"config":{"import":"configserver:http://cloud-config-server:8088/"}}}'
+            SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:
             - 8082
         ports:
@@ -156,12 +172,14 @@ services:
             - cloud-config-server
             - service-registry
             
-    db:
-        image: mysql:8.0.21
+    mysql-db:
+        image: mysql:latest
+        container_name: mysql-db
         ports:
             - "3396:3306"
         environment:
-            MYSQL_ROOT_PASSWORD: root
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=marketplace
         volumes:
             - ./db:/docker-entrypoint-initdb.d/:ro
         networks:
@@ -173,6 +191,12 @@ services:
         restart: always
         ports:
             - 27017:27017
+        environment:
+          - MONGO_INITDB_ROOT_USERNAME=root
+          - MONGO_INITDB_ROOT_PASSWORD=root
+          - MONGO_INITDB_DATABASE=marketplace
+          - MONGO_DB_USERNAME=dvuser
+          - MONGO_DB_PASSWORD=dvuser
         networks:
             - stk-network
         

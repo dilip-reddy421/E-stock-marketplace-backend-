@@ -11,45 +11,70 @@ services:
     
     elasticsearch:
         image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
+        container_name: elasticsearch
         ports:
             - "9200:9200"
         networks:
             - stk-network
         environment:
             - "discovery.type=single-node"
+            - XPACK_SECURITY_ENABLED=false
+            - XPACK_REPORTING_ENABLED=false
+            - XPACK_MONITORING_ENABLED=false
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
         volumes:
             - ./elasticsearch/data:/usr/share/elasticsearch/data:rw              # Persistence data
+            - ./elasticsearch/conf/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 
     logstash:
         image: docker.elastic.co/logstash/logstash:7.2.0
+        container_name: logstash
+        command: logstash -f /usr/share/logstash/pipeline/logstash.conf
         ports:
             - "25826:25826"
             - "5044:5044"
         networks:
             - stk-network
+        environment:
+            - "discovery.type=single-node"
+            - XPACK_SECURITY_ENABLED=false
+            - XPACK_REPORTING_ENABLED=false
+            - XPACK_MONITORING_ENABLED=false
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
         volumes:
             - ./logstash/pipeline:/usr/share/logstash/pipeline:ro                # Pipeline configuration
+            - ./logstash/pipeline/logstash.yml:/usr/share/logstash/config/logstash.yml
+            - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
         restart: on-failure
         depends_on:
             - elasticsearch
         
     kibana:
         image: docker.elastic.co/kibana/kibana:7.2.0
+        container_name: kibana
         ports:
             - "5601:5601"
         networks:
             - stk-network
+        volumes: 
+            - ./kibana/conf/kibana.yml:/usr/share/kibana/config/kibana.yml
         restart: on-failure
         depends_on:
             - elasticsearch
             
     filebeat:
         image: docker.elastic.co/beats/filebeat:7.2.0
+        container_name: filebeat
         volumes:
           - ./filebeat/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro # Configuration file
           - /var/lib/docker/containers:/var/lib/docker/containers:ro           # Docker logs
           - /var/run/docker.sock:/var/run/docker.sock:ro                       # Additional information about containers
           - ./filebeat/data:/usr/share/filebeat/data:rw                        # Persistence data
+          - ./filebeat/logs:/usr/share/filebeat/dockerlogs
         user: root                                                             # Allow access to log files and docker.sock
         restart: on-failure
         networks:
@@ -95,13 +120,13 @@ services:
             SPRING_DATASOURCE_URL : jdbc:mysql://mysql-db:3306/marketplace?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
             SPRING_DATASOURCE_USERNAME : root
             SPRING_DATASOURCE_PASSWORD : root
-            SPRING_RABBITMQ_HOST :rabbitmq
+            SPRING_RABBITMQ_HOST : rabbitmq
             SPRING_APPLICATION_JSON: '{"spring":{"config":{"import":"configserver:http://cloud-config-server:8088/"}}}'
             SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:
-            - 8085
+            - 8089
         ports:
-            - 8085:8085
+            - 8089:8089
         labels:
               collect_logs_with_filebeat: "true"
               decode_log_event_to_json_object: "true"
@@ -123,14 +148,14 @@ services:
             dockerfile: Dockerfile
         image: stock-service:latest
         environment:
-            SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE:marketplace
-            SPRING_DATA_MONGODB_HOST:mongo_db
-            SPRING_DATA_MONGODB_PORT:27817
-            SPRING_DATA_MONGODB_URI:mongodb://mongo_db:27817/marketplace
-            SPRING_DATA_MONGODB_USERNAME:dvuser
-            SPRING_DATA_MONGODB_PASSWORD:dvuser
-            SPRING_DATA_MONGODB_DATABASE:marketplace
-            SPRING_RABBITMQ_HOST :rabbitmq
+            SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: marketplace
+            SPRING_DATA_MONGODB_HOST: mongo_db
+            SPRING_DATA_MONGODB_PORT: 27817
+            SPRING_DATA_MONGODB_URI: mongodb://mongo_db:27817/marketplace
+            SPRING_DATA_MONGODB_USERNAME: dvuser
+            SPRING_DATA_MONGODB_PASSWORD: dvuser
+            SPRING_DATA_MONGODB_DATABASE: marketplace
+            SPRING_RABBITMQ_HOST : rabbitmq
             SPRING_APPLICATION_JSON: '{"spring":{"config":{"import":"configserver:http://cloud-config-server:8088/"}}}'
             SPRING_APPLICATION_JSON: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://service-registry:8761/eureka"}}}}'
         expose:

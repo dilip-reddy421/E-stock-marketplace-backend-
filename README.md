@@ -1,2 +1,2 @@
 # E-stock-marketplace-backend-
-E-stock marketplace backend repo
+E-stock marketplace backend repository
